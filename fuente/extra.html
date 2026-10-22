@@ -1,0 +1,34 @@
+<script>
+(function(){
+  var C=[["Cobertura funcional de Grafana Cloud", 12, 3, 5, 5], ["Portabilidad y vendor lock-in", 9, 5, 3, 4], ["Facilidad de implementación", 6, 3, 4, 2], ["Facilidad de operación", 9, 3, 4, 2], ["Estabilidad y madurez", 8, 3, 4, 3], ["Escalabilidad", 6, 4, 4, 4], ["Gestión centralizada de agentes", 7, 3, 5, 4], ["Integración con Kubernetes", 7, 3, 5, 5], ["Integración con AWS y Azure", 5, 4, 4, 4], ["Compatibilidad con Prometheus exporters", 7, 3, 5, 5], ["Gestión de logs", 5, 3, 4, 4], ["Traces y tail sampling", 5, 5, 4, 5], ["Gestión de configuración y GitOps", 4, 4, 4, 3], ["Esfuerzo operativo recurrente", 4, 3, 4, 2], ["Riesgo de migración", 3, 4, 3, 2], ["Facilidad para evolucionar la arquitectura", 3, 4, 4, 3]];
+  var presets={base:{},port:{1:25,0:8},cost:{3:16,13:10,2:10},managed:{0:22,6:10},dom:{1:45}};
+  var names={base:'Pesos base',port:'Portabilidad prioritaria',cost:'Esfuerzo operativo',managed:'Funciones administradas',dom:'Portabilidad dominante'};
+  var host=document.getElementById('scoring-app');if(!host)return;
+  var w=C.map(function(c){return c[1];});
+  var pre=document.createElement('div');pre.className='presets';
+  Object.keys(presets).forEach(function(k){var b=document.createElement('button');b.className='btn';b.type='button';b.textContent=names[k];b.setAttribute('aria-pressed','false');b.dataset.k=k;
+    b.addEventListener('click',function(){w=C.map(function(c,i){return presets[k][i]!==undefined?presets[k][i]:c[1];});sync(k);});pre.appendChild(b);});
+  host.appendChild(pre);
+  var grid=document.createElement('div');grid.className='sl';host.appendChild(grid);
+  var bars=document.createElement('div');bars.className='bars';bars.setAttribute('aria-live','polite');host.appendChild(bars);
+  var inputs=[],labels=[];
+  C.forEach(function(c,i){
+    var l=document.createElement('label');l.textContent=c[0];l.htmlFor='wt'+i;
+    var v=document.createElement('span');v.style.color='var(--muted)';
+    var r=document.createElement('input');r.type='range';r.min='0';r.max='50';r.step='1';r.id='wt'+i;
+    r.addEventListener('input',function(){w[i]=Number(r.value);sync(null);});
+    var n=document.createElement('span');
+    grid.appendChild(l);grid.appendChild(v);grid.appendChild(r);grid.appendChild(n);inputs.push(r);labels.push([v,n]);
+  });
+  function sync(k){
+    var t=w.reduce(function(a,b){return a+b;},0)||1;
+    inputs.forEach(function(r,i){r.value=w[i];labels[i][0].textContent=Math.round(w[i]/t*100)+' %';labels[i][1].textContent=w[i];});
+    [].forEach.call(pre.children,function(b){b.setAttribute('aria-pressed',String(b.dataset.k===k));});
+    var res=[['Contrib',2],['Alloy',3],['Híbrida C1',4]].map(function(o){var s=0;C.forEach(function(c,i){s+=c[o[1]]*w[i];});return [o[0],s/t];});
+    bars.innerHTML='';
+    res.forEach(function(r){var d=document.createElement('div');d.className='bar';
+      d.innerHTML='<span>'+r[0]+'</span><span class="bg"><i style="width:'+(r[1]/5*100)+'%"></i></span><b>'+r[1].toFixed(2).replace('.',',')+'</b>';bars.appendChild(d);});
+  }
+  sync('base');
+})();
+</script>

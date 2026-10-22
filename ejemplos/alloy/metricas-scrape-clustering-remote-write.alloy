@@ -1,0 +1,38 @@
+// 1. Exporter de Linux embebido en Alloy: no hay proceso node_exporter aparte.
+prometheus.exporter.unix "node" { }
+
+// 2. Convierte los targets del exporter en targets raspables y les pone etiquetas del dominio.
+discovery.relabel "node" {
+  targets = prometheus.exporter.unix.node.targets
+  rule {
+    target_label = "environment"
+    replacement  = sys.env("OBS_ENVIRONMENT")
+  }
+}
+
+// 3. Descubre pods con la anotación prometheus.io/scrape (Kubernetes).
+discovery.kubernetes "pods" { role = "pod" }
+
+// 4. Scrape de los pods. clustering reparte los targets entre las réplicas de Alloy.
+//    Las etiquetas de los targets deben ser iguales en todas las réplicas: no usar constants.hostname aquí.
+prometheus.scrape "pods" {
+  targets    = discovery.kubernetes.pods.targets
+  forward_to = [prometheus.remote_write.cloud.receiver]
+  clustering { enabled = true }
+}
+
+prometheus.scrape "node" {
+  targets    = discovery.relabel.node.output
+  forward_to = [prometheus.remote_write.cloud.receiver]
+}
+
+// 5. Remote write a Grafana Cloud. Credenciales por variable de entorno, nunca en el archivo.
+prometheus.remote_write "cloud" {
+  endpoint {
+    url = sys.env("GCLOUD_PROM_URL")
+    basic_auth {
+      username = sys.env("GCLOUD_PROM_USER")
+      password = sys.env("GCLOUD_RW_API_KEY")
+    }
+  }
+}

@@ -1,0 +1,12 @@
+exporters:
+  load_balancing:
+    routing_key: traceID
+    timeout: 10s
+    retry_on_failure: { enabled: true, initial_interval: 5s, max_interval: 30s, max_elapsed_time: 300s }
+    sending_queue: { enabled: true, num_consumers: 2, queue_size: 1000 }
+    protocol: { otlp: { timeout: 1s, sending_queue: { enabled: true } } }
+    resolver:
+      k8s:
+        service: trace-sampler.observability     # Service headless apuntando a un StatefulSet
+        ports: [4317]
+        return_hostnames: true

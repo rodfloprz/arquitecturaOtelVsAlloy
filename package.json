@@ -1,0 +1,12 @@
+{
+  "name": "observability-evaluation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Evaluación de observabilidad: Grafana Alloy frente a OpenTelemetry Collector Contrib con Grafana Cloud",
+  "scripts": {
+    "build:md": "node fuente/make-md.js",
+    "build:html": "node fuente/build-html.js",
+    "build": "node fuente/make-md.js && node fuente/build-html.js"
+  },
+  "dependencies": { "marked": "^18.0.0" }
+}

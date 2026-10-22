@@ -1,0 +1,14 @@
+processors:
+  memory_limiter: { check_interval: 1s, limit_percentage: 80 }
+  k8sattributes: { extract: { metadata: [k8s.namespace.name, k8s.pod.name, k8s.node.name] } }
+  resource/env:
+    attributes:
+      - { key: deployment.environment, value: "${env:OBS_ENVIRONMENT}", action: upsert }
+  tail_sampling:
+    decision_wait: 30s
+    num_traces: 100000
+    policies:
+      - { name: drop-health, type: drop, drop: { drop_sub_policy: [ { name: health, type: string_attribute, string_attribute: { key: url.path, values: ["/health", "/ready"] } } ] } }
+      - { name: errors, type: status_code, status_code: { status_codes: [ERROR] } }
+      - { name: baseline, type: probabilistic, probabilistic: { sampling_percentage: 10 } }
+  batch: {}

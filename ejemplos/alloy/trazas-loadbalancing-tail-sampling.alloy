@@ -1,0 +1,33 @@
+otelcol.exporter.loadbalancing "tier1" {
+  routing_key = "traceID"
+  resolver {
+    kubernetes { service = "trace-sampler.observability" }
+  }
+  protocol { otlp { client { tls { insecure = false } } } }
+}
+
+// En el nivel 2 (StatefulSet):
+otelcol.processor.tail_sampling "main" {
+  decision_wait = "30s"
+  num_traces    = 100000
+  decision_cache = {
+    sampled_cache_size     = 200000,
+    non_sampled_cache_size = 200000,
+  }
+  policy {
+    name = "errors"
+    type = "status_code"
+    status_code { status_codes = ["ERROR"] }
+  }
+  policy {
+    name = "slow"
+    type = "latency"
+    latency { threshold_ms = 2000 }
+  }
+  policy {
+    name = "base"
+    type = "probabilistic"
+    probabilistic { sampling_percentage = 10 }
+  }
+  output { traces = [otelcol.exporter.otlphttp.cloud.input] }
+}

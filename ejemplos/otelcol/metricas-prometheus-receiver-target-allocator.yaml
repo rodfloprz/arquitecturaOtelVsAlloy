@@ -1,0 +1,43 @@
+receivers:
+  prometheus:
+    # Con target_allocator, el receiver pide los targets asignados a este shard.
+    target_allocator:
+      endpoint: http://otel-ta:80
+      interval: 30s
+      collector_id: ${env:POD_NAME}
+    config:
+      scrape_configs:
+        - job_name: node-exporter          # nombre estable: se vuelve la etiqueta job
+          scrape_interval: 30s
+          kubernetes_sd_configs:
+            - role: pod
+          relabel_configs:
+            - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+              regex: "true"
+              action: keep
+          metric_relabel_configs:
+            - source_labels: [__name__]
+              regex: "node_(cpu_seconds_total|memory_.*|filesystem_.*)"
+              action: keep                 # control de cardinalidad en origen
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+  batch: {}
+extensions:
+  basicauth/grafana:
+    client_auth:
+      username: ${env:GCLOUD_OTLP_USER}
+      password: ${env:GCLOUD_RW_API_KEY}
+exporters:
+  otlphttp/grafana:
+    endpoint: ${env:GCLOUD_OTLP_URL}
+    auth:
+      authenticator: basicauth/grafana
+service:
+  extensions: [basicauth/grafana]
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [memory_limiter, batch]
+      exporters: [otlphttp/grafana]

@@ -1,0 +1,24 @@
+receivers:
+  filelog:
+    include: [/var/log/app/*.log]
+    start_at: end
+    storage: file_storage/pos         # posiciones persistentes entre reinicios
+    operators:
+      - type: json_parser
+processors:
+  memory_limiter: { check_interval: 1s, limit_percentage: 80 }
+  batch: {}
+extensions:
+  file_storage/pos: { directory: /var/lib/otelcol/pos }
+  file_storage/queue: { directory: /var/lib/otelcol/queue }
+  basicauth/grafana:
+    client_auth: { username: "${env:GCLOUD_OTLP_USER}", password: "${env:GCLOUD_RW_API_KEY}" }
+exporters:
+  otlphttp/grafana:
+    endpoint: ${env:GCLOUD_OTLP_URL}
+    auth: { authenticator: basicauth/grafana }
+    sending_queue: { enabled: true, storage: file_storage/queue }
+service:
+  extensions: [file_storage/pos, file_storage/queue, basicauth/grafana]
+  pipelines:
+    logs: { receivers: [filelog], processors: [memory_limiter, batch], exporters: [otlphttp/grafana] }

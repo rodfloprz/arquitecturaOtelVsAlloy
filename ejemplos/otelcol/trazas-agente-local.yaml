@@ -1,0 +1,19 @@
+receivers:
+  otlp:
+    protocols: { grpc: { endpoint: 0.0.0.0:4317 }, http: { endpoint: 0.0.0.0:4318 } }
+processors:
+  memory_limiter: { check_interval: 1s, limit_percentage: 80, spike_limit_percentage: 20 }
+  resourcedetection: { detectors: [env, system], timeout: 2s }
+  batch: {}
+exporters:
+  load_balancing:
+    routing_key: traceID
+    protocol: { otlp: { tls: { insecure: false }, timeout: 5s } }
+    resolver:
+      dns: { hostname: trace-sampler-headless.observability.svc.cluster.local, port: "4317" }
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [load_balancing]

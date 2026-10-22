@@ -1,0 +1,11 @@
+otelcol.auth.basic "cloud" {
+  username = sys.env("GCLOUD_OTLP_USER")
+  password = sys.env("GCLOUD_RW_API_KEY")
+}
+
+otelcol.exporter.otlphttp "cloud" {
+  client {
+    endpoint = sys.env("GCLOUD_OTLP_URL")
+    auth     = otelcol.auth.basic.cloud.handler
+  }
+}

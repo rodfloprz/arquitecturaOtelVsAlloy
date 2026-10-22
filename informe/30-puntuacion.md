@@ -1,0 +1,51 @@
+[← Anterior](29-matriz.md) · [Índice](../README.md) · [Siguiente →](31-piloto.md)
+
+# Puntuación ponderada y análisis de sensibilidad
+
+*Sección 17 · página 31 de 36*
+
+> Con los pesos propuestos, Alloy obtiene 4,21 de 5, Contrib 3,49 y la híbrida (C1) 3,72. La conclusión se mantiene al priorizar el esfuerzo operativo o las funciones administradas, y solo se invierte si la portabilidad pasa a pesar cerca de un tercio del total.
+
+> **Nota.** Las puntuaciones son juicios del analista sustentados en la evidencia de cada fila. La columna «Tipo» separa los criterios que descansan en hechos documentados (Objetivo) de los que son una valoración arquitectónica (Juicio). Los pesos son editables abajo.
+
+### Criterios, pesos y puntuaciones base (1 a 5, mayor es mejor)
+
+| Criterio | Peso base | A: Contrib | B: Alloy | C1: híbrida | Tipo | Evidencia |
+| --- | --- | --- | --- | --- | --- | --- |
+| Cobertura funcional de Grafana Cloud | 12 % | 3 | 5 | 5 | Objetivo | Perfiles, Database Observability y Kubernetes Monitoring con alertas solo existen con Alloy; con Contrib la cobertura es parcial |
+| Portabilidad y vendor lock-in | 9 % | 5 | 3 | 4 | Objetivo | Contrib usa YAML upstream; Alloy usa sintaxis propia en el motor por defecto, con OTLP portable y el motor OTel como salida |
+| Facilidad de implementación | 6 % | 3 | 4 | 2 | Juicio | Operator y Target Allocator frente a un binario; la híbrida suma dos modelos |
+| Facilidad de operación | 9 % | 3 | 4 | 2 | Juicio | Complejidad promedio 2,5, 1,6 y 3,3 en la página 12d |
+| Estabilidad y madurez | 8 % | 3 | 4 | 3 | Objetivo | Contrib 0.x con cambios incompatibles en cada release y componentes beta; Alloy da garantías para lo que es GA |
+| Escalabilidad | 6 % | 4 | 4 | 4 | Juicio | Target Allocator y balanceo frente a clustering; sin benchmarks que distingan |
+| Gestión centralizada de agentes | 7 % | 3 | 5 | 4 | Objetivo | OpAMP beta y sin guía oficial en Kubernetes para Contrib; remotecfg con onboarding oficial y retorno a última configuración válida |
+| Integración con Kubernetes | 7 % | 3 | 5 | 5 | Objetivo | Chart oficial con Fleet integrado y alertas frente a receivers OTel sin alertas |
+| Integración con AWS y Azure | 5 % | 4 | 4 | 4 | Objetivo | Cloud Provider Observability es del backend; receivers en Contrib y exporters en Alloy cubren el resto |
+| Compatibilidad con Prometheus exporters | 7 % | 3 | 5 | 5 | Objetivo | Receiver Prometheus beta con funciones rechazadas y reparto externo; exporters embebidos y clustering en Alloy |
+| Gestión de logs | 5 % | 3 | 4 | 4 | Objetivo | Alloy es el cliente de Loki soportado por Grafana; WAL en loki.write; filelog en Contrib es sólido pero sin soporte de Grafana para el cliente |
+| Traces y tail sampling | 5 % | 5 | 4 | 5 | Objetivo | Contrib añade groupbytrace y procesadores nuevos; Alloy tiene tail_sampling GA y balanceo sin groupbytrace |
+| Gestión de configuración y GitOps | 4 % | 4 | 4 | 3 | Juicio | Ambos soportan Git y la Action; la híbrida duplica formatos |
+| Esfuerzo operativo recurrente | 4 % | 3 | 4 | 2 | Objetivo | Gobierno a 36 meses: 164 a 246, 82 a 123 y 246 a 328 días-persona |
+| Riesgo de migración | 3 % | 4 | 3 | 2 | Juicio | Contrib reutiliza lo ya hecho con OTel; Alloy exige aprender su sintaxis; la híbrida suma ambos riesgos |
+| Facilidad para evolucionar la arquitectura | 3 % | 4 | 4 | 3 | Juicio | Ambas siguen upstream; Alloy suma funciones de Grafana y el motor OTel; la híbrida añade dos ciclos |
+
+Justificación de los pesos: la cobertura de Grafana Cloud (12 %) y la operación (9 %) pesan más porque el principio rector pide maximizar el valor del backend y minimizar el esfuerzo; la portabilidad (9 %) refleja la preferencia declarada de reducir el lock-in sin que domine la decisión.
+
+### Calculadora de sensibilidad
+
+> **Calculadora interactiva de pesos:** disponible en la versión HTML (`docs/index.html`, con GitHub Pages).
+
+### Lectura de la sensibilidad
+
+| Escenario | Contrib | Alloy | Híbrida | ¿Cambia la conclusión? |
+| --- | --- | --- | --- | --- |
+| Pesos base | 3,49 | 4,21 | 3,72 | Alloy lidera |
+| Portabilidad prioritaria (portabilidad 25, cobertura 8) | 3,72 | 4,01 | 3,71 | No: se estrecha la brecha |
+| Esfuerzo operativo prioritario (operación 16, esfuerzo recurrente 10, implementación 10) | 3,42 | 4,18 | 3,47 | No |
+| Funciones administradas prioritarias (cobertura 22, gestión central 10) | 3,43 | 4,30 | 3,84 | No |
+| Portabilidad dominante (peso 45 sobre 91 del resto, un tercio del total) | 3,89 | 3,89 | 3,79 | Empate entre Alloy y Contrib |
+
+Si el cliente pondera la portabilidad por encima de un tercio de la decisión, o si el piloto penaliza a Alloy en rendimiento, la alternativa A con Fleet Management por OpAMP pasa a ser competitiva; C5 sería la salida dentro del mismo binario cuando el motor OTel salga de preview.
+
+---
+[← Anterior](29-matriz.md) · [Índice](../README.md) · [Siguiente →](31-piloto.md)

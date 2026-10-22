@@ -1,0 +1,17 @@
+# .github/workflows/sync-fleet.yaml (esquema; la Action detecta pipelines Alloy y OTel)
+name: sync-fleet
+on: { push: { branches: [main], paths: ["fleet-pipelines/**"] } }
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: alloy validate fleet-pipelines/profiles/linux-standard.alloy
+  sync:
+    needs: validate
+    environment: fleet-prod          # entorno protegido con revisores
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: grafana/fleet-management-sync-action@v1   # versión a fijar; ver el README de la Action
+        with: { url: "${{ vars.FM_URL }}", token: "${{ secrets.FM_TOKEN }}" }

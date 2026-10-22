@@ -1,0 +1,60 @@
+[← Anterior](08-discovery-sin-alloy.md) · [Índice](../README.md) · [Siguiente →](10-metricas-config.md)
+
+# Métricas de infraestructura con Prometheus exporters: tres patrones
+
+*Sección 6 · página 10 de 36*
+
+<sub>Leyenda: ✅ verificado · 🟡 inferido · ⚠️ no confirmado · 🧪 preview o experimental</sub>
+
+> Para métricas de infraestructura por exporters, el patrón más operable es que un componente Prometheus-nativo raspe y reenvíe por remote write. El receiver Prometheus de Contrib funciona, pero no debe asumirse equivalente a un servidor Prometheus.
+
+### Qué hace y qué no hace el receiver Prometheus de Contrib ✅
+
+| Hace | No hace |
+| --- | --- |
+| Soporta la configuración `scrape_config` de Prometheus, incluido service discovery y relabeling | `alert_config.alertmanagers`, `remote_read`, `remote_write` y `rule_files`: devuelve error si aparecen |
+| Reutiliza el scrape manager y el parser de Prometheus | Autoescalar el scrape con varias réplicas; sin Target Allocator, cada réplica raspa todo |
+| Convierte exemplars y, con feature gate, histogramas nativos a exponenciales | Evaluar reglas de grabación o alertas |
+| Acepta `target_allocator` como fuente dinámica de targets | Ser un componente sin estado: es stateful |
+
+El estado del componente es beta para métricas. Los `$` en la configuración se interpretan como variables de entorno y deben escaparse con `$$`.
+
+### Patrón 1: el Collector raspa con su receiver
+
+Un collector (o un StatefulSet con Target Allocator) raspa y exporta por OTLP o por `prometheusremotewrite`. En Alloy, el equivalente es `prometheus.scrape` con `prometheus.remote_write`.
+
+### Patrón 2: un componente dedicado raspa y entrega
+
+Prometheus en modo agente, o `prometheus.scrape` de Alloy, raspa y entrega por remote write directo a Grafana Cloud o a un collector que lo reexporta. Mantiene nombres de métricas y etiquetas de Prometheus intactos.
+
+### Patrón 3: híbrido con scraping local y gateways
+
+Agentes por nodo raspan lo local (node_exporter, cAdvisor, kubelet) y un tier central raspa lo compartido (kube-state-metrics, bases de datos, balanceadores) con clustering o Target Allocator; un gateway sin estado aplica filtros y reintentos.
+
+### Evaluación
+
+| Criterio | Patrón 1 con Contrib | Patrón 2 con Prometheus o Alloy | Patrón 3 híbrido |
+| --- | --- | --- | --- |
+| Service discovery de Prometheus | Completo en el receiver; reparto con Target Allocator | Completo; Alloy lo reparte con clustering | Completo, repartido por capa |
+| Relabeling y filtrado de targets | Completo (`relabel_configs`, `metric_relabel_configs`) | Completo; Alloy suma `prometheus.relabel` | Completo |
+| Sharding | Target Allocator, solo Kubernetes | Clustering de Alloy; Prometheus necesita sharding manual | Combinado |
+| HA y duplicados | Duplicados sin reparto; réplicas distintas por target | Alloy: ownership por hashing; dos réplicas iguales duplican | Depende de la capa |
+| Cardinalidad | `metric_relabel_configs` en origen; `filter` y `transform` en gateway | `metric_relabel_configs` en origen; Adaptive Metrics en Cloud ✅ | Control en dos puntos |
+| Etiquetas y resource attributes | OTLP convierte `job` e `instance` a atributos; se vuelven a mapear en Cloud | Etiquetas Prometheus intactas | Mixto |
+| Remote write, OTLP y conversiones | OTLP o `prometheusremotewrite` | Remote write nativo | Ambos |
+| Reintentos, colas y recuperación | Colas del exporter, persistentes con `file_storage` | Cola y WAL de `prometheus.remote_write` 🟡 | Por capa |
+| Aprovechar Grafana Cloud Metrics | Vía OTLP: `job`/`instance` desde `service.*`, `target_info` para el resto ✅ | Directo | Directo o vía OTLP |
+| Complejidad y dependencias | Alta: Operator, Target Allocator | Baja | Media |
+
+### Recomendación
+
+1. **Arquitectura principal:** Alloy con `prometheus.exporter.*` donde existan, `prometheus.scrape` con `clustering` y `prometheus.remote_write` a Grafana Cloud Metrics. Conserva nombres y etiquetas de Prometheus.
+2. **Alternativa para quien conserve Prometheus:** Prometheus en modo agente por clúster con remote write; Alloy queda para logs, trazas y OTLP. Se pierde el reparto automático.
+3. **Solo OTel:** receiver Prometheus con Target Allocator, aceptando beta, el límite de funciones y el trabajo adicional de la página anterior.
+
+Gestión de series: el alcance de las etiquetas de Kubernetes y de infraestructura se decide en origen con relabeling; Adaptive Metrics agrega o elimina series no usadas en Grafana Cloud.
+
+*Fuentes: [receiver Prometheus](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/receiver/prometheusreceiver/README.md), [clustering de Alloy](https://grafana.com/docs/alloy/latest/configure/clustering/distribute-workload/), [atributos promovidos](https://grafana.com/docs/grafana-cloud/send-data/otlp/promote-resource-attributes.md).*
+
+---
+[← Anterior](08-discovery-sin-alloy.md) · [Índice](../README.md) · [Siguiente →](10-metricas-config.md)

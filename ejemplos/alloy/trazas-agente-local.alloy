@@ -1,0 +1,20 @@
+otelcol.receiver.otlp "in" {
+  grpc { endpoint = "0.0.0.0:4317" }
+  http { endpoint = "0.0.0.0:4318" }
+  output { traces = [otelcol.processor.memory_limiter.default.input] }
+}
+
+otelcol.processor.memory_limiter "default" {
+  check_interval = "1s"
+  limit          = "400MiB"
+  output { traces = [otelcol.processor.resourcedetection.default.input] }
+}
+
+otelcol.processor.resourcedetection "default" {
+  detectors = ["env", "system"]
+  output { traces = [otelcol.processor.batch.default.input] }
+}
+
+otelcol.processor.batch "default" {
+  output { traces = [otelcol.exporter.loadbalancing.tier1.input] }
+}

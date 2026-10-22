@@ -1,0 +1,5 @@
+# Modelo B. Spring Boot con Micrometer: el endpoint es scrapeable.
+management:
+  endpoints.web.exposure.include: prometheus,health
+  metrics.distribution.percentiles-histogram.http.server.requests: true
+# Dependencia: io.micrometer:micrometer-registry-prometheus

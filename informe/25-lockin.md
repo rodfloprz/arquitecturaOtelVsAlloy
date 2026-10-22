@@ -1,0 +1,40 @@
+[← Anterior](24-seguridad.md) · [Índice](../README.md) · [Siguiente →](26-cfg-logs-trazas.md)
+
+# Vendor lock-in en cuatro capas
+
+*Sección 14 · página 26 de 36*
+
+<sub>Leyenda: ✅ verificado · 🟡 inferido · ⚠️ no confirmado · 🧪 preview o experimental</sub>
+
+> El lock-in se concentra en el backend y en la sintaxis del motor por defecto de Alloy; la instrumentación y el transporte OTLP son portables en ambas alternativas. Evitar lock-in innecesario no obliga a renunciar a funciones de Grafana Cloud que aportan valor.
+
+| Capa | Con Alloy | Con Contrib | Qué conservar portable |
+| --- | --- | --- | --- |
+| Instrumentación | Portable: SDKs OTel, OTLP, convenciones semánticas | Igual | Instrumentación sin nada específico de backend |
+| Recolección | Sintaxis Alloy del motor por defecto no portable; YAML de Collector disponible con el motor OTel (preview) | YAML upstream portable | Mantener la lógica específica en módulos pequeños; documentar el equivalente YAML |
+| Procesamiento | Conectores y procesadores `otelcol.*` envuelven componentes upstream (portables); `loki.process` y `prometheus.*` son específicos | Procesadores upstream; cambia al cambiar de distribución en nombres de tipo | Separar procesamiento genérico (OTTL, filtros, muestreo) del específico del destino |
+| Backend | Dashboards, alertas, SLOs, Application Observability y Cloud Provider Observability dependen de Grafana | Igual | Dashboards y alertas como código; métricas con nombres estándar |
+
+### Estándares propuestos
+
+1. OTLP como protocolo de transporte y OTel SDK como instrumentación por defecto.
+2. Convenciones semánticas y un diccionario único de atributos de recurso (`service.name`, `service.namespace`, `deployment.environment`).
+3. Configuración versionada en Git, con perfiles y sin credenciales.
+4. Procesamiento genérico en componentes con equivalente upstream (`transform`, `filter`, `redaction`, `tail_sampling`) y específico del destino en un módulo aparte.
+5. Dashboards, alertas y SLOs como código para poder reproducirlos.
+6. Logs estructurados en origen y etiquetas pocas y estables.
+7. Span metrics: decidir según el escenario de la sección 10; con generación en collector se conservan métricas Prometheus estándar.
+
+### Qué es portable y qué no
+
+| Elemento | ¿Portable? | Nota |
+| --- | --- | --- |
+| Trazas OTLP y métricas OTLP | Sí | Cualquier backend OTLP |
+| Métricas Prometheus por remote write | Sí | Cualquier backend compatible |
+| Logs OTLP | Sí | Loki acepta OTLP de forma nativa |
+| Pipelines Fleet Management de Alloy | Parcial | Alloy Remote Config y OpAMP son protocolos abiertos con implementaciones de servidor alternativas ✅ |
+| Configuración Alloy en sintaxis propia | No directo | Hay vía documentada de Contrib a Alloy; la inversa no está documentada ⚠️ |
+| Adaptive Telemetry, metrics-generator, Application Observability | No | Funciones del backend |
+
+---
+[← Anterior](24-seguridad.md) · [Índice](../README.md) · [Siguiente →](26-cfg-logs-trazas.md)

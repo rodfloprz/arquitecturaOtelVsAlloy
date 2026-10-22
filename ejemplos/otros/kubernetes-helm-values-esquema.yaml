@@ -1,0 +1,7 @@
+# Agentes: chart de Kubernetes Monitoring (Alloy) con Fleet Management integrado.
+alloy-metrics:  { remoteConfig: { enabled: true }, alloy: { clustering: { enabled: true } } }
+alloy-logs:     { remoteConfig: { enabled: true } }
+# Gateway de trazas: dos releases separados; nivel 2 como StatefulSet con Service headless.
+trace-lb:       { replicaCount: 3, mode: deployment }
+trace-sampler:  { replicaCount: 3, mode: statefulset }
+# Recursos y límites: medir con carga representativa; memory_limiter cercano al 80 % del límite del pod.
